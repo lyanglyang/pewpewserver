@@ -78,6 +78,19 @@ func configureSocketIO() *socketio.Server {
 			}()
 		})
 
+		//game events
+		so.On("player-update", func(msg string) {
+			fmt.Println("player-update", msg)
+		})
+
+		so.On("player-use-sword", func(msg string) {
+			fmt.Println("player-use-sword", msg)
+		})
+
+		so.On("player-hit", func(msg string) {
+			fmt.Println("player-hit", msg)
+		})
+
 		//What will happen if clients disconnect
 		so.On("disconnection", func() {
 			log.Println("on disconnect")
