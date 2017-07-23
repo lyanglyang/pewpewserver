@@ -1,0 +1,7 @@
+package: github.com/lyanglyang/pewpewserver
+import:
+- package: github.com/googollee/go-socket.io
+  vcs: git
+  version: v1.4
+  repo: git@github.com:googollee/go-socket.io.git
+- package: github.com/googollee/go-engine.io
