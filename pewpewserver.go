@@ -7,6 +7,7 @@ import (
 	"github.com/googollee/go-socket.io"
 	"strings"
 	"fmt"
+	"os/exec"
 )
 
 var green = string([]byte{27, 91, 57, 55, 59, 52, 50, 109})
@@ -81,14 +82,26 @@ func configureSocketIO() *socketio.Server {
 		//game events
 		so.On("player-update", func(msg string) {
 			fmt.Println("player-update", msg)
+			so.Emit("player-update", msg)
 		})
 
 		so.On("player-use-sword", func(msg string) {
-			fmt.Println("player-use-sword", msg)
+			//fmt.Println("player-use-sword", msg)
+			so.Emit("player-use-sword", msg)
 		})
 
 		so.On("player-hit", func(msg string) {
-			fmt.Println("player-hit", msg)
+			//fmt.Println("player-hit", msg)
+			so.Emit("player-hit", msg)
+		})
+
+		so.On("player-join", func(msg string) {
+			out, err := exec.Command("uuidgen").Output()
+			if err != nil {
+				log.Fatal(err)
+			}
+			fmt.Printf("---%s", out)
+			so.Emit("player-join", out)
 		})
 
 		//What will happen if clients disconnect
