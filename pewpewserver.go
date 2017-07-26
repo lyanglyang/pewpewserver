@@ -3,7 +3,6 @@ package main
 import (
 	"log"
 	"net/http"
-	"time"
 	"github.com/googollee/go-socket.io"
 	"strings"
 	"fmt"
@@ -49,6 +48,14 @@ func main() {
 	http.ListenAndServe(":5000", nil)
 }
 
+type Gamer struct {
+	Id       string `json:"id""`
+	SocketId string `json:"socketId"`
+	Name     string `json:"name""`
+}
+
+var gamers []Gamer
+
 func configureSocketIO() *socketio.Server {
 	server, err := socketio.NewServer(nil)
 	if err != nil {
@@ -58,62 +65,44 @@ func configureSocketIO() *socketio.Server {
 	//Client connects to server
 	server.On("connection", func(so socketio.Socket) {
 
-		//What will happen as soon as the connection is established:
-		so.On("connection", func(msg string) {
-			so.Join("clients")
-			println(so.Id() + " joined clients.")
+		so.Join("gamers")
 
-			//In case you want to send a custom emit directly after the client connected.
-			//If you fire an emit directly after the connection event it won't work therefore you need to wait a bit
-			//In this case two seconds.
-			ticker := time.NewTicker(2 * time.Second)
-			go func() {
-				for {
-					select {
-					case <-ticker.C:
-						so.Emit("online", "Do Something!")
-						ticker.Stop()
-						return
-					}
-				}
-			}()
-		})
-
-		//game events
-		so.On("player-update", func(msg string) {
-			fmt.Println("player-update", msg)
-			so.Emit("player-update", msg)
-		})
-
-		so.On("player-use-sword", func(msg string) {
-			//fmt.Println("player-use-sword", msg)
-			so.Emit("player-use-sword", msg)
-		})
-
-		so.On("player-hit", func(msg string) {
-			//fmt.Println("player-hit", msg)
-			so.Emit("player-hit", msg)
-		})
-
-		so.On("player-join", func(msg string) {
+		so.On("signup", func(name string) {
 			out, err := exec.Command("uuidgen").Output()
 			if err != nil {
 				log.Fatal(err)
 			}
-			fmt.Printf("---%s", out)
-			so.Emit("player-join", out)
+			gamer := Gamer{Id: string(out), SocketId: so.Id(), Name: name}
+			gamers = append(gamers, gamer)
+			so.Emit("joined-successfully", gamer)
+			so.BroadcastTo("gamers", "player-joined", gamer)
+		})
+
+		//game events
+		so.On("player-update", func(msg string) {
+			//fmt.Println("player-update", msg)
+			so.BroadcastTo("gamers", "player-update", msg)
+		})
+
+		so.On("player-use-sword", func(msg string) {
+			//fmt.Println("player-use-sword", msg)
+			so.BroadcastTo("gamers", "player-use-sword", msg)
+		})
+
+		so.On("player-hit", func(msg string) {
+			//fmt.Println("player-hit", msg)
+			so.BroadcastTo("gamers", "player-hit", msg)
 		})
 
 		//What will happen if clients disconnect
 		so.On("disconnection", func() {
-			log.Println("on disconnect")
-		})
-
-		//Custom event as example
-		so.On("hello", func(msg string) {
-			log.Println("received request (hello): " + msg)
-
-			so.Emit("Hi", "How can I help you?")
+			for i, v := range gamers {
+				if v.SocketId == so.Id() {
+					log.Println("on disconnect removed:", so.Id())
+					gamers = append(gamers[:i], gamers[i+1:]...)
+					break
+				}
+			}
 		})
 	})
 	server.On("error", func(so socketio.Socket, err error) {
