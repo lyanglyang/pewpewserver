@@ -7,6 +7,7 @@ import (
 	"strings"
 	"fmt"
 	"os/exec"
+	"os"
 )
 
 var green = string([]byte{27, 91, 57, 55, 59, 52, 50, 109})
@@ -42,10 +43,16 @@ func main() {
 	wsServer := new(customServer)
 	wsServer.Server = ioServer
 
+	port := os.Getenv("PORT")
+
+	if port == "" {
+		port = "5000"
+	}
+
 	//HTTP settings
-	fmt.Printf("%slistening on port 5000%s \n", green, reset)
+	fmt.Printf("%slistening on port %s %s \n", green, port, reset)
 	http.Handle("/socket.io/", wsServer)
-	http.ListenAndServe(":5000", nil)
+	http.ListenAndServe(":"+port, nil)
 }
 
 type Gamer struct {
@@ -86,6 +93,7 @@ func configureSocketIO() *socketio.Server {
 
 		so.On("player-use-sword", func(msg string) {
 			//fmt.Println("player-use-sword", msg)
+			so.Emit("player-use-sword", msg)
 			so.BroadcastTo("gamers", "player-use-sword", msg)
 		})
 
